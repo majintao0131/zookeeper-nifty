@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configure name="ZkNiftyServer">
+	<item name="ZookeeperAddress" address="192.168.1.68:2181" />
+	<item name="BossThreadCount" count="1" />
+	<item name="WorkerThreadCount" count="8" />
+	<item name="ServiceName" value="HelloService" />
+	<item name="ServiceVersion" value="1.0.0" />
+</configure>

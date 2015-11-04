@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configure name="ZkNiftyClient">
+	<item name="ZookeeperAddress" address="192.168.1.68:2181" />
+	<item name="BossThreadCount" count="1" />
+	<item name="WorkerThreadCount" count="8" />
+	<item name="ServiceInformations">
+		<service_item service_name="HelloService" service_version="1.0.0" connection_count="20" />
+	</item>
+</configure>
