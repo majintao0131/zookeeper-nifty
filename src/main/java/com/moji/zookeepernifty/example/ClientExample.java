@@ -20,7 +20,7 @@ public class ClientExample {
 		manager.run();
 		
 		try {
-			Thread.sleep(500000);
+			Thread.sleep(5000);
 		} catch (Exception e) {
 			System.out.print("Exception : " + e.getMessage());
 		}

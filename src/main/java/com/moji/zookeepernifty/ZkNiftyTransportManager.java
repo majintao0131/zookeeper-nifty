@@ -155,7 +155,7 @@ public class ZkNiftyTransportManager {
 		}
 	}
 	
-	// 该类是一个单例类
+	// 该类是一个单例类，用于管理所有的服务信息和connection信息
 	private static ZkNiftyTransportManager _instance = null;
 	
 	// 存放Service到可用transport的映射
@@ -294,7 +294,8 @@ public class ZkNiftyTransportManager {
 
 	public void putTransport(String service_path, TProtocolWithType client) {
 		if (client == null) {
-			System.out.println("client is null.");
+			log.warn("Protocol for service[{}] is null.", service_path);
+			return;
 		}
 		if (client.type == TProtocolType.TEMPORARY) {
 			log.debug("free the temporary transport.");
@@ -340,7 +341,7 @@ public class ZkNiftyTransportManager {
 		
 		// 每次update后都进行清理
 		serviceVersion = serviceVersion.cleanServiceVersion();
-		System.out.println("updateServiceVersion list size is " + serviceVersion.host_list.size());
+		log.debug("updateServiceVersion list size is [{}].", serviceVersion.host_list.size());
 	}
 	
 	private ServiceVersion createNewServiceVersion(String path, List<InetSocketAddress> list) {
@@ -401,11 +402,11 @@ public class ZkNiftyTransportManager {
 	
 	private ServiceVersion updateServiceVersion(ServiceVersion serviceVersion, List<InetSocketAddress> list) {
 		serviceVersion.incServiceVersion();
-		System.out.println("updateServiceVersion list size is " + serviceVersion.host_list.size());
 		for (InetSocketAddress address : list) {
 			if (serviceVersion.updateHostVersion(address) == CREATE_NEW_HOSTVERSION) {
 				HostVersion hostVersion = new HostVersion(address, serviceVersion.getServiceVersion());
 				serviceVersion.addHostVersion(hostVersion);
+				log.debug("updateServiceVersion add new hostversion[{}] to service[{}].", address, serviceVersion.service_path);
 				createPersistentTransport(serviceVersion.service_path, address);
 			}
 		}

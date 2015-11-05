@@ -29,7 +29,6 @@ public class ZookeeperRPCMutilServerAddressProvider implements RPCServerAddressP
 	private ArrayList<PathChildrenCache> _cachedPath_list = null;
 	private ZkNiftyCallback _callback = null;
 	private ZkNiftyClientConfig _config;
-	private Boolean _bContinue = true;
 	
 	public ZookeeperRPCMutilServerAddressProvider(ZkNiftyClientConfig config) {
 		this._config = config;
@@ -37,7 +36,6 @@ public class ZookeeperRPCMutilServerAddressProvider implements RPCServerAddressP
 	
 	public void close() throws IOException {
 		try {
-			_bContinue = false;
 			if (_cachedPath_list != null) {
 				for (PathChildrenCache pathChildrenCache : _cachedPath_list) {
 					pathChildrenCache.clear();
@@ -83,7 +81,7 @@ public class ZookeeperRPCMutilServerAddressProvider implements RPCServerAddressP
 			for (String path : service_list) {
 				PathChildrenCache cachedPath = buildPathChildrenCache(_zkClient, path, true);
 				if (cachedPath == null) {
-					System.out.println("cachedPath is null.");
+					log.warn("create cachedPath failed, the cachedPath[{}] is null.", path);
 					return;
 				}
 				cachedPath.start(StartMode.POST_INITIALIZED_EVENT);
@@ -92,10 +90,6 @@ public class ZookeeperRPCMutilServerAddressProvider implements RPCServerAddressP
 			log.error("buildPathChildrenCache failed. Error message[{}].", e.getMessage());
 			e.printStackTrace();
 		}
-	}
-	
-	public void quit() {
-		_bContinue = false;
 	}
 	
 	private List<InetSocketAddress> transfer(String address) {
@@ -123,13 +117,13 @@ public class ZookeeperRPCMutilServerAddressProvider implements RPCServerAddressP
 				PathChildrenCacheEvent.Type eventType = event.getType();
 				switch (eventType) {
 					case CHILD_UPDATED:
-						System.out.println("Update : " + cachedPath.getCurrentData());
+						log.debug("PathChildrenCacheEvent[{}] : Update[{}].", path, cachedPath.getCurrentData());
 						break;
 					case CHILD_ADDED:
-						System.out.println("Add : " + cachedPath.getCurrentData());
+						log.debug("PathChildrenCacheEvent[{}] : Add[{}].", path, cachedPath.getCurrentData());
 						break;
 					case CHILD_REMOVED:
-						System.out.println("Remove : " + cachedPath.getCurrentData());
+						log.debug("PathChildrenCacheEvent[{}] : Remove[{}].", path, cachedPath.getCurrentData());
 						break;
 					case CONNECTION_RECONNECTED:
 						log.debug("Connection[{}] is reconnection.", path);
@@ -154,7 +148,7 @@ public class ZookeeperRPCMutilServerAddressProvider implements RPCServerAddressP
 			private void rebuild() throws Exception {
 				List<ChildData> children = cachedPath.getCurrentData();
 				if (children == null || children.isEmpty()) {
-					System.out.println("rpc server-cluster error...");
+					log.warn("rpc server-cluster error...");
 					return;
 				}
 				
