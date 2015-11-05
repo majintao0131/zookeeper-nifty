@@ -109,7 +109,7 @@ public class ZkNiftyTransportManager {
 		public int updateHostVersion(InetSocketAddress address) {
 			lock.lock();
 			for (HostVersion hostVersion : host_list) {
-				if (hostVersion.address == address) {
+				if (hostVersion.address.equals(address)) {
 					hostVersion.version = this.version;
 					log.debug("Update the HostVersion which address is [{}] to Version[{}].", address, hostVersion.version);
 					return UPDATE_HOSTVERSION_SUCCESS;
@@ -126,10 +126,13 @@ public class ZkNiftyTransportManager {
 		// 清理ServiceVersion内部过期的hostVersion
 		public ServiceVersion cleanServiceVersion() {
 			lock.lock();
-			for (HostVersion hostVersion  : this.host_list) {
-				if (hostVersion.version != this.version) {
-					this.host_list.remove(hostVersion);
-					--this.count;
+			for (int i = 0; i < count && i < host_list.size(); ) {
+				HostVersion hostVersion = host_list.get(i);
+				if (hostVersion.version != version) {
+					host_list.remove(hostVersion);
+					--count;
+				} else {
+					++i;
 				}
 			}
 			lock.unlock();
@@ -290,9 +293,13 @@ public class ZkNiftyTransportManager {
 	}
 
 	public void putTransport(String service_path, TProtocolWithType client) {
+		if (client == null) {
+			System.out.println("client is null.");
+		}
 		if (client.type == TProtocolType.TEMPORARY) {
 			log.debug("free the temporary transport.");
 			client.protocol.getTransport().close();
+			return;
 		}
 		
 		// 在放回链接的时候判断下这个链接对应的service是否可用，如果可用则放回；否则关闭
@@ -305,7 +312,7 @@ public class ZkNiftyTransportManager {
 		
 		Boolean bPutBack = false;
 		for (HostVersion hostVersion : serviceVersion.host_list) {
-			if (hostVersion.getAddress() == client.address && hostVersion.getVersion() == serviceVersion.getServiceVersion()) {
+			if (hostVersion.getAddress().equals(client.address) && hostVersion.getVersion() == serviceVersion.getServiceVersion()) {
 				bPutBack = true;
 				break;
 			}
@@ -333,6 +340,7 @@ public class ZkNiftyTransportManager {
 		
 		// 每次update后都进行清理
 		serviceVersion = serviceVersion.cleanServiceVersion();
+		System.out.println("updateServiceVersion list size is " + serviceVersion.host_list.size());
 	}
 	
 	private ServiceVersion createNewServiceVersion(String path, List<InetSocketAddress> list) {
@@ -344,6 +352,7 @@ public class ZkNiftyTransportManager {
 			
 			// 追加到对应的ServiceVersion内的链表内
 			serviceVersion.addHostVersion(hostVersion);
+			_service_address_map.put(path, serviceVersion);
 			
 			// create transport for the host, and the count of transports is defined in config
 			if (createPersistentTransport(path, address) < 0) {
@@ -359,7 +368,7 @@ public class ZkNiftyTransportManager {
 		Class<? extends TServiceClient> clientClass = _service_class_map.get(path);
 		try {
 			TProtocolWithType protocol = new TProtocolWithType();
-			protocol.type = TProtocolType.TEMPORARY;
+			protocol.type = type;
 			protocol.protocol = _zkNiftyClient.createProtocol(clientClass, _niftyClient, address);
 			protocol.address = address;
 			return protocol;
@@ -392,8 +401,11 @@ public class ZkNiftyTransportManager {
 	
 	private ServiceVersion updateServiceVersion(ServiceVersion serviceVersion, List<InetSocketAddress> list) {
 		serviceVersion.incServiceVersion();
+		System.out.println("updateServiceVersion list size is " + serviceVersion.host_list.size());
 		for (InetSocketAddress address : list) {
 			if (serviceVersion.updateHostVersion(address) == CREATE_NEW_HOSTVERSION) {
+				HostVersion hostVersion = new HostVersion(address, serviceVersion.getServiceVersion());
+				serviceVersion.addHostVersion(hostVersion);
 				createPersistentTransport(serviceVersion.service_path, address);
 			}
 		}

@@ -122,6 +122,15 @@ public class ZookeeperRPCMutilServerAddressProvider implements RPCServerAddressP
 			public void childEvent(CuratorFramework client, PathChildrenCacheEvent event) throws Exception {
 				PathChildrenCacheEvent.Type eventType = event.getType();
 				switch (eventType) {
+					case CHILD_UPDATED:
+						System.out.println("Update : " + cachedPath.getCurrentData());
+						break;
+					case CHILD_ADDED:
+						System.out.println("Add : " + cachedPath.getCurrentData());
+						break;
+					case CHILD_REMOVED:
+						System.out.println("Remove : " + cachedPath.getCurrentData());
+						break;
 					case CONNECTION_RECONNECTED:
 						log.debug("Connection[{}] is reconnection.", path);
 						break;
@@ -130,8 +139,10 @@ public class ZookeeperRPCMutilServerAddressProvider implements RPCServerAddressP
 						break;
 					case CONNECTION_LOST:
 						log.debug("Connection[{}] error, waiting...", path);
+						break;
 					case INITIALIZED:
 						log.debug("Connection[{}] init...", path);
+						break;
 					default:
 						break;
 				}
@@ -148,13 +159,17 @@ public class ZookeeperRPCMutilServerAddressProvider implements RPCServerAddressP
 				}
 				
 				String path_address = null;
+				List<InetSocketAddress> address_list = new ArrayList<InetSocketAddress>();
+				
 				for (ChildData data : children) {
 					path_address = data.getPath();
 					path_address = path_address.substring(path_address.lastIndexOf('/') + 1);
 					String address = new String(path_address.getBytes(), "utf-8");
 					// 触发地址更新操作
-					reset(path, transfer(address));
+					address_list.addAll(transfer(address));
 				}
+				
+				reset(path, address_list);
 			}
 		});
 		return cachedPath;

@@ -20,30 +20,31 @@ public class ClientExample {
 		manager.run();
 		
 		try {
-			Thread.sleep(5000);
+			Thread.sleep(500000);
 		} catch (Exception e) {
 			System.out.print("Exception : " + e.getMessage());
 		}
 		
-		
-		TProtocolWithType protocol = manager.getTransport(path);
-		if (protocol != null) {
-			long startTime=System.currentTimeMillis();   //获取开始时间  
-			for (int i = 0; i < 100; ++i) {
+		long startTime=System.currentTimeMillis();   //获取开始时间  
+		for (int i = 0; i < 100000; ++i) {
+			TProtocolWithType protocol = manager.getTransport(path);
+			if (protocol != null) {
+				
 				HelloService.Client client = new HelloService.Client(protocol.getProtocol());
 				try {
 					String echo = client.hello("World.");
 					System.out.println(echo);
-					Thread.sleep(1000);
+					//Thread.sleep(1000);
 					echo = client.bye("World.");
 					System.out.println(echo);
 				} catch (Exception e) {
 					System.out.println("Talk Failed. Exception : " + e.getMessage());
 				} 
 			}
-			long endTime=System.currentTimeMillis(); //获取结束时间  
-		    System.out.println("程序运行时间： "+(endTime-startTime)+"ms");  
+			manager.putTransport(path, protocol);
 		}
+		long endTime=System.currentTimeMillis(); //获取结束时间  
+	    System.out.println("程序运行时间： "+(endTime-startTime)+"ms");  
 		
 		manager.stop();
 	}

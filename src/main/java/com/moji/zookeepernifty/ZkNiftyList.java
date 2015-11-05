@@ -25,4 +25,8 @@ public class ZkNiftyList<T> {
 	public T getClient() {
 		return queue.poll();
 	}
+	
+	public int getCount() {
+		return queue.size();
+	}
 }
