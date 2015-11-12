@@ -60,13 +60,13 @@ public class DefaultZkNiftyServer extends AbstractZkNiftyServer {
 		return 0;
 	}
 	
-	public void startServer(TProcessor processor) throws Exception {
+	public void start(TProcessor processor) throws Exception {
 		_thriftServerDefBuilder = new ThriftServerDefBuilder()
 					.listen(0)
 					.withProcessor(processor);
 		try {
 			_server = new NettyServerTransport(_thriftServerDefBuilder.build(),
-					createThriftServerConfig().build(),
+					defaultThriftServerConfigBuilder().build(),
 					new DefaultChannelGroup());
 			_server.start();
 			if (registerService() < 0) {
@@ -81,7 +81,7 @@ public class DefaultZkNiftyServer extends AbstractZkNiftyServer {
 		}
 	}
 	
-	private NettyServerConfigBuilder createThriftServerConfig() throws Exception {
+	private NettyServerConfigBuilder defaultThriftServerConfigBuilder() throws Exception {
 		try {
 			NettyServerConfigBuilder configBuilder = NettyServerConfig.newBuilder();
 			configBuilder.setBossThreadCount(_config.getBossThreadCount());
@@ -119,45 +119,8 @@ public class DefaultZkNiftyServer extends AbstractZkNiftyServer {
 		}
 	}
 
-	/** 
-     * 或者主机名： 
-     * @return 
-     */ 
-    public static String getLocalHostName() { 
-         String hostName; 
-         try { 
-              /**返回本地主机。*/ 
-              InetAddress addr = InetAddress.getLocalHost(); 
-              /**获取此 IP 地址的主机名。*/ 
-              hostName = addr.getHostName(); 
-         }catch(Exception ex){ 
-             hostName = ""; 
-         } 
-           
-         return hostName; 
-    } 
-    /** 
-     * 获得本地所有的IP地址 
-     * @return 
-     */ 
-	private String getLocalHostIP() {
-		String address = null;
-		String host_name = getLocalHostName();
-		try {
-			for (InetAddress a : InetAddress.getAllByName(host_name)) {
-				if (!a.isLinkLocalAddress() && !a.isLoopbackAddress()) {
-					address = a.getHostAddress();
-					break;
-				}
-			}
-		} catch (Exception ex) {
-			return null;
-		}
-		return address;
-	}
-
 	private int registerService() {
-		String address = getLocalHostIP();
+		String address = CommonUtil.getLocalHostIP();
 		if (address == null) {
 			log.error("Cannt get localhost address.");
 			return -1;
@@ -173,7 +136,7 @@ public class DefaultZkNiftyServer extends AbstractZkNiftyServer {
 	}
 	
 	private int unregisterService() {
-		String address = getLocalHostIP();
+		String address = CommonUtil.getLocalHostIP();
 		if (address == null) {
 			log.error("Cannt get localhost address.");
 			return -1;
