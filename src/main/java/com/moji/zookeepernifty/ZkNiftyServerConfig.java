@@ -19,6 +19,7 @@ public class ZkNiftyServerConfig extends Object {
 	private static final Logger log = LoggerFactory.getLogger(ZkNiftyServerConfig.class);
 	
 	private static final String ZKNIFTYSERVER = "ZkNiftyServer";
+	private static final String LISTENPORT = "ListenPort";
 	private static final String ZOOKEEPERADDRESS = "ZookeeperAddress";
 	private static final String BOSSTHREADCOUNT = "BossThreadCount";
 	private static final String WORKERTHREADCOUNT = "WorkerThreadCount";
@@ -31,6 +32,7 @@ public class ZkNiftyServerConfig extends Object {
 	
 	private String _config_path;
 	
+	private int _listen_port;
 	private String _service_name;
 	private String _service_version;
 	private String _zookeeper_address;
@@ -95,6 +97,8 @@ public class ZkNiftyServerConfig extends Object {
 			String key = node.getAttributes().getNamedItem("name").getNodeValue();
 			if (key.equals(ZOOKEEPERADDRESS)) {
 				_zookeeper_address = node.getAttributes().getNamedItem("address").getNodeValue();
+			} else if (key.equals(LISTENPORT)) {
+				_listen_port = Integer.parseInt(node.getAttributes().getNamedItem("port").getNodeValue());
 			} else if (key.equals(BOSSTHREADCOUNT)) {
 				_boss_thread_count = Integer.parseInt(node.getAttributes().getNamedItem("count").getNodeValue());
 			} else if (key.equals(WORKERTHREADCOUNT)) {
@@ -118,6 +122,10 @@ public class ZkNiftyServerConfig extends Object {
 		
 	}
 	
+	public int getListenPort() {
+		return _listen_port;
+	}
+	
 	public String getZookeeper() {
 		return _zookeeper_address;
 	}
@@ -137,5 +145,6 @@ public class ZkNiftyServerConfig extends Object {
 	public String getServiceVersion() {
 		return _service_version;
 	}
+	
 
 }

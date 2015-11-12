@@ -9,14 +9,12 @@ import javax.xml.parsers.ParserConfigurationException;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Hashtable;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;  
-import org.w3c.dom.Element;  
 import org.w3c.dom.Node;  
 import org.w3c.dom.NodeList; 
 import org.xml.sax.SAXException;
@@ -49,7 +47,7 @@ public class ZkNiftyClientConfig extends Object {
 	private Map<String, Integer> _service_transport_map = new Hashtable<String, Integer>();
 	
 	public ZkNiftyClientConfig(String config_path) {
-		this._config_path = config_path;
+		_config_path = config_path;
 		_service_count = 0;
 	}
 	
