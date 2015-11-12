@@ -18,7 +18,7 @@ import org.slf4j.LoggerFactory;
 import com.facebook.nifty.client.NettyClientConfigBuilder;
 import com.facebook.nifty.client.NiftyClient;
 
-import junit.extensions.ExceptionTestCase;
+//import junit.extensions.ExceptionTestCase;
 
 public class ZkNiftyTransportManager {
 	

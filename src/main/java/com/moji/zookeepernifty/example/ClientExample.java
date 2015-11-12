@@ -1,5 +1,7 @@
 package com.moji.zookeepernifty.example;
 
+import java.sql.Time;
+
 import com.moji.zookeepernifty.ZkNiftyClientConfig;
 import com.moji.zookeepernifty.ZkNiftyTransportManager;
 import com.moji.zookeepernifty.ZkNiftyTransportManager.TProtocolWithType;
@@ -34,9 +36,9 @@ public class ClientExample {
 				try {
 					String echo = client.hello("World.");
 					System.out.println(echo);
-					//Thread.sleep(1000);
 					echo = client.bye("World.");
 					System.out.println(echo);
+					Thread.sleep(500);
 				} catch (Exception e) {
 					System.out.println("Talk Failed. Exception : " + e.getMessage());
 				} 
