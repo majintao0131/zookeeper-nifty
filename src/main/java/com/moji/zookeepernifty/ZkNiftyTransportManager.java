@@ -4,6 +4,7 @@ package com.moji.zookeepernifty;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Hashtable;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
@@ -25,7 +26,7 @@ public class ZkNiftyTransportManager {
 	private static final Logger log = LoggerFactory.getLogger(ZkNiftyTransportManager.class);
 	private static final int UPDATE_HOSTVERSION_SUCCESS = 0;
 	private static final int CREATE_NEW_HOSTVERSION = 1;
-	
+
 	public class HostVersion {
 		private InetSocketAddress address;
 		private int version;
@@ -70,7 +71,10 @@ public class ZkNiftyTransportManager {
 			if (bgn_index > count) {
 				bgn_index = 0;
 			}
-			
+			if(host_list.size() == 0) {
+				lock.unlock();
+				return null;
+			}
 			HostVersion hostVersion = host_list.get(bgn_index);
 			int index = bgn_index + 1;
 			while (hostVersion.version != version && index != bgn_index) {
@@ -112,6 +116,7 @@ public class ZkNiftyTransportManager {
 				if (hostVersion.address.equals(address)) {
 					hostVersion.version = this.version;
 					log.debug("Update the HostVersion which address is [{}] to Version[{}].", address, hostVersion.version);
+					lock.unlock();
 					return UPDATE_HOSTVERSION_SUCCESS;
 				}
 			}
@@ -121,6 +126,20 @@ public class ZkNiftyTransportManager {
 			this.host_list.add(hostVersion);
 			lock.unlock();
 			return CREATE_NEW_HOSTVERSION;
+		}
+		
+		public void removeHostVersion(InetSocketAddress address) {
+			lock.lock();
+			Iterator<HostVersion> iter = host_list.iterator(); 
+			while(iter.hasNext()) {
+				HostVersion hostVersion = iter.next();
+				if(hostVersion.getAddress().equals(address)) {
+					iter.remove();
+					--count;
+				}
+			}
+			log.debug("Remove the HostVersion which address is [{}].", address);
+			lock.unlock();
 		}
 		
 		// 清理ServiceVersion内部过期的hostVersion
@@ -288,18 +307,34 @@ public class ZkNiftyTransportManager {
 	
 	public TProtocolWithType getTransport(String service_path) {
 		ZkNiftyList<TProtocolWithType> list = _client_map.get(service_path);
-		if (null == list) {
+		if (null == list || list.getCount() == 0) {
 			// 没有相应的transport可用，则建立一个临时transport
 			log.debug("create a template transport for service{}.", service_path);
 			return createTemporaryTransport(service_path);
 		} 
 		return list.getClient();
 	}
-
+	
+	private void cleanUnavailableService(String service_path, TProtocolWithType client) {
+		ZkNiftyList<TProtocolWithType> list = _client_map.get(service_path);
+		list.Lock();
+		for(TProtocolWithType c : list.getQuene()){
+			if(c.getAddress().equals(client.getAddress())) {
+				list.removeClient(c);
+			}
+		}
+		list.UnLock();
+		_service_address_map.get(service_path).removeHostVersion(client.getAddress());
+		log.warn("remove unavailable client [{}]", client.getAddress());
+	}
+	
 	public void putTransport(String service_path, TProtocolWithType client) {
 		if (client == null) {
 			log.warn("Protocol for service[{}] is null.", service_path);
 			return;
+		}
+		if(!client.protocol.getTransport().isOpen()) {
+			cleanUnavailableService(service_path, client);
 		}
 		if (client.type == TProtocolType.TEMPORARY) {
 			log.debug("free the temporary transport.");
