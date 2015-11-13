@@ -33,10 +33,12 @@ public class ZookeeperRPCServerAddressRegister implements RPCServerAddressRegist
 			
 			if (_zkClient.blockUntilConnected(3000, TimeUnit.MILLISECONDS)) {
 				String servicePath = "/" + service + "/" + version + "/" + address;
+				
 				if(_zkClient.checkExists().forPath(servicePath) != null) {
 					_zkClient.delete().forPath(servicePath);
 					log.debug("delete path [{}] successful. " + address);
 				}
+				
 				String path = _zkClient.create()
 						.creatingParentsIfNeeded()
 						.withMode(CreateMode.EPHEMERAL)
