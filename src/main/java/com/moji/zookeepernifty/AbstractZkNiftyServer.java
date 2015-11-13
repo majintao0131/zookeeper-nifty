@@ -8,4 +8,10 @@ public class AbstractZkNiftyServer implements ZkNiftyServer {
 		// TODO Auto-generated method stub
 	}
 
+	@Override
+	public int init() {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
 }

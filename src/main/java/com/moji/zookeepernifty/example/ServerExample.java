@@ -8,7 +8,7 @@ import com.moji.zookeepernifty.ZkNiftyServerConfig;
 public class ServerExample {
 
 	public static void main(String[] args) {
-		ZkNiftyServerConfig config = new ZkNiftyServerConfig("src/main/java/com/moji/zookeepernifty/example/ServerExample.xml");
+		ZkNiftyServerConfig config = new ZkNiftyServerConfig("ServerExample.xml");
 		if (config.load() < 0) {
 			System.out.println("Load server configure failed.");
 			return;
@@ -30,18 +30,18 @@ public class ServerExample {
 		}
 		
 		try {
-			server.startServer(new HelloService.Processor<>(impl));
+			server.start(new HelloService.Processor<>(impl));
 			System.out.println("Server start successful.");
 		} catch (Exception e) {
 			System.out.println("Server start failed. Exception message : " + e.getMessage());
 		}
-		
-		try {
-			Thread.sleep(2000000);
-		} catch (Exception e) {
-			System.out.println("Thread sleep exception.");
-		}
-		
-		server.close();
+//		
+//		try {
+//			Thread.sleep(2000000);
+//		} catch (Exception e) {
+//			System.out.println("Thread sleep exception.");
+//		}
+//		
+//		server.close();
 	}
 }

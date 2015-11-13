@@ -62,7 +62,7 @@ public class DefaultZkNiftyServer extends AbstractZkNiftyServer {
 	
 	public void start(TProcessor processor) throws Exception {
 		_thriftServerDefBuilder = new ThriftServerDefBuilder()
-					.listen(0)
+					.listen(_config.getListenPort())
 					.withProcessor(processor);
 		try {
 			_server = new NettyServerTransport(_thriftServerDefBuilder.build(),

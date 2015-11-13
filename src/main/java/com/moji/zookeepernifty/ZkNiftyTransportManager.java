@@ -153,6 +153,10 @@ public class ZkNiftyTransportManager {
 		public TProtocol getProtocol() {
 			return protocol;
 		}
+		
+		public InetSocketAddress getAddress() {
+			return address;
+		}
 	}
 	
 	// 该类是一个单例类，用于管理所有的服务信息和connection信息
