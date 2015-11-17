@@ -19,7 +19,6 @@ import org.slf4j.LoggerFactory;
 import com.facebook.nifty.client.NettyClientConfigBuilder;
 import com.facebook.nifty.client.NiftyClient;
 
-//import junit.extensions.ExceptionTestCase;
 
 public class ZkNiftyTransportManager {
 	
@@ -320,6 +319,7 @@ public class ZkNiftyTransportManager {
 		list.Lock();
 		for(TProtocolWithType c : list.getQuene()){
 			if(c.getAddress().equals(client.getAddress())) {
+				c.protocol.getTransport().close();
 				list.removeClient(c);
 			}
 		}
