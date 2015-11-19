@@ -316,6 +316,7 @@ public class ZkNiftyTransportManager {
 	
 	private void cleanUnavailableService(String service_path, TProtocolWithType client) {
 		ZkNiftyList<TProtocolWithType> list = _client_map.get(service_path);
+		_service_address_map.get(service_path).removeHostVersion(client.getAddress());
 		list.Lock();
 		for(TProtocolWithType c : list.getQuene()){
 			if(c.getAddress().equals(client.getAddress())) {
@@ -324,7 +325,6 @@ public class ZkNiftyTransportManager {
 			}
 		}
 		list.UnLock();
-		_service_address_map.get(service_path).removeHostVersion(client.getAddress());
 		log.warn("remove unavailable client [{}]", client.getAddress());
 	}
 	
