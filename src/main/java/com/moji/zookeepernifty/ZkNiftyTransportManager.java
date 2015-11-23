@@ -43,6 +43,67 @@ public class ZkNiftyTransportManager {
 			return this.version;
 		}
 	}
+	
+	public class ClientCount {
+		private int idle;
+		private int busy;
+		private int max;
+		private Lock lock = null;
+		public ClientCount(int max) {
+			this.max = max;
+			this.idle = max;
+			if(lock == null) {
+				lock = new ReentrantLock();
+			}
+		}
+		
+		public void addIdle() {
+			lock.lock();
+			if(idle < max) {
+				++idle;
+				--busy;
+			}
+			lock.unlock();
+		}
+		
+		public void addBusy() {
+			lock.lock();
+			if(busy < max) {
+				++busy;
+				--idle;
+			}
+			lock.unlock();
+		}
+		
+		public void subBusy() {
+			lock.lock();
+			if(busy > 0) {
+				--busy;
+			}
+			lock.unlock();
+		}
+		
+		public void incrBusy() {
+			lock.lock();
+			if(busy < max) {
+				++busy;
+			}
+			lock.unlock();
+		}
+		
+		public int getMaxCount() {
+			return max;
+		}
+
+		public int getIdle() {
+			return idle;
+		}
+
+		public int getBusy() {
+			return busy;
+		}
+	}
+	
 	public class ServiceVersion {
 		private Lock lock = null;
 		private String service_path;
@@ -186,6 +247,8 @@ public class ZkNiftyTransportManager {
 	private Map<String, ServiceVersion> _service_address_map = null;
 	// 用于存放service名称到thrift对应client类的映射
 	private Map<String, Class<? extends TServiceClient>> _service_class_map = null;
+	// 用于存放servive每个地址的链接数
+	private Map<HostVersion, ClientCount> _service_client_count_map = null;
 
 	// 客户端配置类
 	private ZkNiftyClientConfig _config;
@@ -226,6 +289,9 @@ public class ZkNiftyTransportManager {
 		if (_service_class_map == null) {
 			_service_class_map = new Hashtable<String, Class<? extends TServiceClient>>();
 		}
+		
+		if (_service_client_count_map == null)
+			_service_client_count_map = new Hashtable<ZkNiftyTransportManager.HostVersion, ZkNiftyTransportManager.ClientCount>();
 		
 		if (_provider == null) {
 			_provider = new ZookeeperRPCMutilServerAddressProvider(_config);
@@ -310,21 +376,53 @@ public class ZkNiftyTransportManager {
 			// 没有相应的transport可用，则建立一个临时transport
 			log.debug("create a template transport for service{}.", service_path);
 			return createTemporaryTransport(service_path);
-		} 
-		return list.getClient();
+		}
+		TProtocolWithType temp = list.getClient();
+		setClientBusy(service_path, temp.getAddress());
+		return temp;
+	}
+	
+	public ClientCount getClientCount(String service_path, InetSocketAddress address) {
+		ServiceVersion serviceVersion = _service_address_map.get(service_path);
+		for(HostVersion hostVersion : serviceVersion.host_list) {
+			if (hostVersion.getAddress().equals(address) && hostVersion.getVersion() == serviceVersion.getServiceVersion()) {
+				return _service_client_count_map.get(hostVersion);
+			}
+		}
+		return null;
+	}
+	
+	public ClientCount getClientCount(String service_path, HostVersion hostVersion) {
+		ServiceVersion serviceVersion = _service_address_map.get(service_path);
+		for(HostVersion hv : serviceVersion.host_list) {
+			if (hv == hostVersion) {
+				return _service_client_count_map.get(hostVersion);
+			}
+		}
+		return null;
+	}
+	
+	public void setClientBusy( String service_path, InetSocketAddress address) {
+		ClientCount clientCount = getClientCount(service_path, address);
+		if(clientCount != null)
+			clientCount.addBusy();
+	}
+	
+	public void setClientIdle(String service_path, InetSocketAddress address) {
+		ClientCount clientCount = getClientCount(service_path, address);
+		if(clientCount != null)
+			clientCount.addIdle();
 	}
 	
 	private void cleanUnavailableService(String service_path, TProtocolWithType client) {
 		ZkNiftyList<TProtocolWithType> list = _client_map.get(service_path);
-		_service_address_map.get(service_path).removeHostVersion(client.getAddress());
-		list.Lock();
 		for(TProtocolWithType c : list.getQuene()){
-			if(c.getAddress().equals(client.getAddress())) {
-				c.protocol.getTransport().close();
+			if(c == client) {
 				list.removeClient(c);
+				ClientCount clientCount = getClientCount(service_path, client.getAddress());
+				clientCount.subBusy();
 			}
 		}
-		list.UnLock();
 		log.warn("remove unavailable client [{}]", client.getAddress());
 	}
 	
@@ -334,7 +432,11 @@ public class ZkNiftyTransportManager {
 			return;
 		}
 		if(!client.protocol.getTransport().isOpen()) {
-			cleanUnavailableService(service_path, client);
+			try {
+				client.protocol.getTransport().open();
+			} catch (Exception e) {
+				cleanUnavailableService(service_path, client);
+			};
 		}
 		if (client.type == TProtocolType.TEMPORARY) {
 			log.debug("free the temporary transport.");
@@ -361,6 +463,7 @@ public class ZkNiftyTransportManager {
 		if (bPutBack) {
 			ZkNiftyList<TProtocolWithType> list = _client_map.get(service_path);
 			if (null != list) {
+				setClientIdle(service_path, client.getAddress());
 				list.addClient(client);
 			}
 		} else {
@@ -395,7 +498,7 @@ public class ZkNiftyTransportManager {
 			_service_address_map.put(path, serviceVersion);
 			
 			// create transport for the host, and the count of transports is defined in config
-			if (createPersistentTransport(path, address) < 0) {
+			if (createPersistentTransport(path, address, hostVersion) < 0) {
 				log.warn("Create persistent transport for host[{}] Failed.", address);
 			}
 		}
@@ -418,9 +521,9 @@ public class ZkNiftyTransportManager {
 		}
 	}
 	
-	private int createPersistentTransport(String path, InetSocketAddress address) {
+	private int createPersistentTransport(String path, InetSocketAddress address, HostVersion hostVersion) {
 		ZkNiftyList<TProtocolWithType> list = _client_map.get(path);
-		
+		ClientCount clientCount = _service_client_count_map.get(hostVersion);
 		int transport_count = _config.getTransportCount(path);
 		for (int i = 0; i < transport_count; ++i) {
 			TProtocolWithType client = createTransport(path, address, TProtocolType.PERSISTENT);
@@ -435,9 +538,33 @@ public class ZkNiftyTransportManager {
 			}
 			list.addClient(client);
 		}
-		
+		if(clientCount == null) {
+			clientCount = new ClientCount(transport_count);
+			_service_client_count_map.put(hostVersion, clientCount);
+		}
 		return 0;
 	}
+	
+//	private int createPersistentTransport(String path, InetSocketAddress address) {
+//		ZkNiftyList<TProtocolWithType> list = _client_map.get(path);
+//		
+//		int transport_count = _config.getTransportCount(path);
+//		for (int i = 0; i < transport_count; ++i) {
+//			TProtocolWithType client = createTransport(path, address, TProtocolType.PERSISTENT);
+//			if (client == null) {
+//				log.warn("Cannt create new TProtocol for service[{}] which address is [{}].", path, address);
+//				return -1;
+//			}
+//			
+//			if (list == null) {
+//				list = new ZkNiftyList<TProtocolWithType>();
+//				_client_map.put(path, list);
+//			}
+//			list.addClient(client);
+//		}
+//		
+//		return 0;
+//	}
 	
 	private ServiceVersion updateServiceVersion(ServiceVersion serviceVersion, List<InetSocketAddress> list) {
 		serviceVersion.incServiceVersion();
@@ -446,7 +573,7 @@ public class ZkNiftyTransportManager {
 				HostVersion hostVersion = new HostVersion(address, serviceVersion.getServiceVersion());
 				serviceVersion.addHostVersion(hostVersion);
 				log.debug("updateServiceVersion add new hostversion[{}] to service[{}].", address, serviceVersion.service_path);
-				createPersistentTransport(serviceVersion.service_path, address);
+				createPersistentTransport(serviceVersion.service_path, address, hostVersion);
 			}
 		}
 		
@@ -468,8 +595,14 @@ public class ZkNiftyTransportManager {
 			log.warn("Create temporary transport failed.");
 			return null;
 		}
-		
+		ClientCount clientCount = getClientCount(path, hostVersion);
+		if(clientCount !=null) {
+			if(clientCount.getBusy() + clientCount.getIdle() < clientCount.getMaxCount()) {
+				clientCount.incrBusy();
+				return createTransport(path, hostVersion.getAddress(), TProtocolType.PERSISTENT);
+			}
+		}
 		return createTransport(path, hostVersion.getAddress(), TProtocolType.TEMPORARY);
-		
 	}
+
 }
