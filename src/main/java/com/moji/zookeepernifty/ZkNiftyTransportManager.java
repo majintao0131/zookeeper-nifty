@@ -544,28 +544,7 @@ public class ZkNiftyTransportManager {
 		}
 		return 0;
 	}
-	
-//	private int createPersistentTransport(String path, InetSocketAddress address) {
-//		ZkNiftyList<TProtocolWithType> list = _client_map.get(path);
-//		
-//		int transport_count = _config.getTransportCount(path);
-//		for (int i = 0; i < transport_count; ++i) {
-//			TProtocolWithType client = createTransport(path, address, TProtocolType.PERSISTENT);
-//			if (client == null) {
-//				log.warn("Cannt create new TProtocol for service[{}] which address is [{}].", path, address);
-//				return -1;
-//			}
-//			
-//			if (list == null) {
-//				list = new ZkNiftyList<TProtocolWithType>();
-//				_client_map.put(path, list);
-//			}
-//			list.addClient(client);
-//		}
-//		
-//		return 0;
-//	}
-	
+		
 	private ServiceVersion updateServiceVersion(ServiceVersion serviceVersion, List<InetSocketAddress> list) {
 		serviceVersion.incServiceVersion();
 		for (InetSocketAddress address : list) {
