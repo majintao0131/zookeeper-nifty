@@ -17,7 +17,6 @@ public class ServerExample {
 			public String hello(String username) throws TException {
 				return "Hello " + username;
 			}
-
 			public String bye(String username) throws TException {
 				return "Bye " + username;
 			}

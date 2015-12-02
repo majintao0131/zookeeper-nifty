@@ -1,19 +1,21 @@
 package com.moji.zookeepernifty.example;
 
+
+import org.apache.thrift.protocol.TProtocol;
+
 import com.moji.zookeepernifty.ZkNiftyClientConfig;
-import com.moji.zookeepernifty.ZkNiftyTransportManager;
-import com.moji.zookeepernifty.ZkNiftyTransportManager.TProtocolWithType;
 import com.moji.zookeepernifty.example.HelloService;
+import com.moji.zookeepernifty.syncclientpool.TProtocolPool;
 
-public class ClientExample {
+public class PoolSyncClientExample {
 
-	private static ZkNiftyClientConfig config;	
+	private static ZkNiftyClientConfig config;
+	
+	@SuppressWarnings("static-access")
 	private static void runWithSingleThread() {
-		final ZkNiftyTransportManager manager = ZkNiftyTransportManager.getInstance(config);
+		TProtocolPool pool = TProtocolPool.getInstance(config);
 		final String path = "/HelloService/1.0.0";
 		// 必须注册服务路径对应的Client类
-		manager.registerClientClass(path, HelloService.Client.class);
-		manager.run();
 		
 		try {
 			Thread.sleep(5000);
@@ -22,10 +24,10 @@ public class ClientExample {
 		}
 		
 		long startTime = System.currentTimeMillis(); // 获取开始时间
-		for (int i = 0; i < 100000; ++i) {
-			TProtocolWithType protocol = manager.getTransport(path);
+		for(int i = 0; i < 100000;i++) {
+			TProtocol protocol = pool.getTransport(path, HelloService.class);
 			try {
-				HelloService.Client client = new HelloService.Client(protocol.getProtocol());
+				HelloService.Client client = new HelloService.Client(protocol);
 				if (protocol != null) {
 					String echo = client.hello("World.");
 					System.out.println(echo);
@@ -35,13 +37,12 @@ public class ClientExample {
 			} catch (Exception e) {
 				System.out.println("Talk Failed. Exception : " + e.getMessage());
 			}
-			manager.putTransport(path, protocol);
+			pool.returnTransport(path, protocol);
 		}
 		
 		long endTime=System.currentTimeMillis(); //获取结束时间  
-	    System.out.println("程序运行时间： "+(endTime-startTime)+"ms");  
-		
-		manager.stop();
+	    System.out.println("程序运行时间： "+(endTime-startTime)+"ms");
+	    pool.close();
 	}
 	
 	

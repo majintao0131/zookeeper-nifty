@@ -3,7 +3,6 @@ package com.moji.zookeepernifty;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
-import org.apache.curator.retry.RetryNTimes;
 import org.apache.thrift.TProcessor;
 import org.jboss.netty.channel.group.DefaultChannelGroup;
 import org.slf4j.Logger;
@@ -19,7 +18,6 @@ import com.moji.zookeepernifty.ZkNiftyServerConfig;
 import static java.util.concurrent.Executors.newFixedThreadPool;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.util.concurrent.ExecutorService;
 
 public class DefaultZkNiftyServer extends AbstractZkNiftyServer {
