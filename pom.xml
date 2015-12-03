@@ -4,7 +4,7 @@
 
 	<groupId>com.moji.zookeepernifty</groupId>
 	<artifactId>zookeeper-nifty</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>0.0.1</version>
 	<name>zookeeper-nifty</name>
 
 	<properties>
