@@ -2,14 +2,11 @@ package com.moji.zookeepernifty;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.net.ConnectException;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.imps.CuratorFrameworkState;
-import org.apache.curator.utils.CloseableUtils;
 import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,14 +33,14 @@ public class ZookeeperRPCServerAddressRegister implements RPCServerAddressRegist
 				
 				if(_zkClient.checkExists().forPath(servicePath) != null) {
 					_zkClient.delete().forPath(servicePath);
-					log.debug("delete path [{}] successful. " + address);
+					log.debug("delete path [{}] successful. ", address);
 				}
 				
 				String path = _zkClient.create()
 						.creatingParentsIfNeeded()
 						.withMode(CreateMode.EPHEMERAL)
 						.forPath(servicePath);
-				log.debug("create path [{}] successful. " + path);
+				log.debug("create path [{}] successful. ", path);
 			} else {
 				log.warn("CuratorFramework client connect failed.");
 				return -1;
@@ -73,7 +70,7 @@ public class ZookeeperRPCServerAddressRegister implements RPCServerAddressRegist
 			
 			if (_zkClient.blockUntilConnected(3000, TimeUnit.MILLISECONDS)) {
 				_zkClient.delete().forPath("/" + service + "/" + version + "/" + address);
-				log.debug("delete path [{}] successful. " + address);
+				log.debug("delete path [{}] successful. ", address);
 			}
 			
 		} catch (InterruptedException e) {
