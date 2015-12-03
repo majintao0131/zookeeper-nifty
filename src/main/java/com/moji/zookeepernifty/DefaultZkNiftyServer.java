@@ -140,7 +140,7 @@ public class DefaultZkNiftyServer extends AbstractZkNiftyServer {
 			return -1;
 		}
 		
-		address = address + ":" + _server.getPort();
+		address = address + ":" + _config.getListenPort();
 		if (_register.unregister(_config.getServiceName(), _config.getServiceVersion(), address) < 0) {
 			log.warn("The path [{}] unregister to zookeeper failed, Host[{}].", "/" + _config.getServiceName() + "/" + _config.getServiceVersion() + "/", address);
 			return -1;
