@@ -51,6 +51,9 @@ public class ZkNiftyClientConfig extends Object {
 		_service_count = 0;
 	}
 	
+	public ZkNiftyClientConfig() {
+	}
+
 	public int load() {
 		DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
 		try {
@@ -168,6 +171,47 @@ public class ZkNiftyClientConfig extends Object {
 			return _service_transport_map.get(path).intValue();
 		}
 		return DEFAULT_TRANSPORT_COUNT;
+	}
+
+	public String get_zookeeper_address() {
+		return _zookeeper_address;
+	}
+
+	public void set_zookeeper_address(String _zookeeper_address) {
+		this._zookeeper_address = _zookeeper_address;
+	}
+
+	public int get_boss_thread_count() {
+		return _boss_thread_count;
+	}
+
+	public void set_boss_thread_count(int _boss_thread_count) {
+		this._boss_thread_count = _boss_thread_count;
+	}
+
+	public int get_worker_thread_count() {
+		return _worker_thread_count;
+	}
+
+	public void set_worker_thread_count(int _worker_thread_count) {
+		this._worker_thread_count = _worker_thread_count;
+	}
+
+	public List<String> get_service_path_list() {
+		return _service_path_list;
+	}
+
+	public void set_service_path_list(List<String> _service_path_list) {
+		this._service_path_list = _service_path_list;
+	}
+
+	public Map<String, Integer> get_service_transport_map() {
+		return _service_transport_map;
+	}
+
+	public void set_service_transport_map(
+			Map<String, Integer> _service_transport_map) {
+		this._service_transport_map = _service_transport_map;
 	}
 
 }

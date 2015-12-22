@@ -35,7 +35,7 @@ public class PoolAsynClientExample {
 		}catch(Exception e) {
 		}
 
-		for(int i = 0; i < 10;i++) {
+		for(int i = 0; i < 100000;i++) {
 			TProtocolFactory protocol = new TBinaryProtocol.Factory();
 			TNonblockingTransport transport = pool.getTransport(path);
 			HelloService.AsyncClient asyncClient = new HelloService.AsyncClient(protocol, clientManager, transport);
