@@ -19,21 +19,20 @@ public class TProtocolPoolFactory extends BasePooledObjectFactory<TProtocol> {
 	private static Logger logger = LoggerFactory.getLogger(TProtocolPoolFactory.class);
 	@SuppressWarnings("rawtypes")
 	private final Class clazz;
-	private final InetSocketAddress address;
 	private final NiftyClient niftyClient;
 	private static DefaultZkNiftyClient zkNiftyClient = new DefaultZkNiftyClient();
-
-	public TProtocolPoolFactory(@SuppressWarnings("rawtypes") Class clazz,
-			InetSocketAddress address, NiftyClient niftyClient) {
+	public TProtocolPoolFactory(@SuppressWarnings("rawtypes") Class clazz, NiftyClient niftyClient) {
 		super();
 		this.clazz = clazz;
-		this.address = address;
 		this.niftyClient = niftyClient;
 	}
 
 	@SuppressWarnings("unchecked")
 	@Override
 	public TProtocol create() throws Exception {
+		InetSocketAddress address = TProtocolPool.getRandomHost();
+		if(address == null) 
+			return null;
 		return zkNiftyClient.createProtocol(clazz, niftyClient, address);
 	}
 

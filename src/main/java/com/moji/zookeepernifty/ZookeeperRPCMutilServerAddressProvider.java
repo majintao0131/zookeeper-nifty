@@ -148,6 +148,7 @@ public class ZookeeperRPCMutilServerAddressProvider implements RPCServerAddressP
 			private void rebuild() throws Exception {
 				List<ChildData> children = cachedPath.getCurrentData();
 				if (children == null || children.isEmpty()) {
+					reset(path, null);
 					log.warn("rpc server-cluster error...");
 					return;
 				}

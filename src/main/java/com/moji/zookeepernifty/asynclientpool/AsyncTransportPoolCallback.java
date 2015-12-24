@@ -9,6 +9,10 @@ public class AsyncTransportPoolCallback implements ZkNiftyCallback {
 	
 	@Override
 	public void run(String service_path, List<InetSocketAddress> list) {
-		AsyncTransportPool.updateAddressList(list);
+		if(list == null || list.size() == 0) {
+			AsyncTransportPool.clearServicePool(service_path);
+		} else {
+			AsyncTransportPool.updateAddressList(list);
+		}
 	}
 }

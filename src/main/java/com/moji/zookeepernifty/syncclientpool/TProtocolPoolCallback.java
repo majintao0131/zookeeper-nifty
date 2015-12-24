@@ -9,6 +9,10 @@ public class TProtocolPoolCallback implements ZkNiftyCallback {
 	
 	@Override
 	public void run(String service_path, List<InetSocketAddress> list) {
-		TProtocolPool.updateAddressList(list);
+		if(list == null || list.size() == 0) {
+			TProtocolPool.clearServicePool(service_path);
+		} else {
+			TProtocolPool.updateAddressList(list);			
+		}
 	}
 }

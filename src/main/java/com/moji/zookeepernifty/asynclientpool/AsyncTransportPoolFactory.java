@@ -15,17 +15,17 @@ public class AsyncTransportPoolFactory extends BasePooledObjectFactory<TNonblock
 		
 	private static Logger logger = LoggerFactory.getLogger(AsyncTransportPoolFactory.class);
 
-	private final InetSocketAddress address;
 	private final int clientTimeout; 
-	public AsyncTransportPoolFactory(int clientTimeout,
-			InetSocketAddress address) {
+	public AsyncTransportPoolFactory(int clientTimeout) {
 		super();
 		this.clientTimeout = clientTimeout;
-		this.address = address;
 	}
 
 	@Override
 	public TNonblockingTransport create() throws Exception {
+		InetSocketAddress address = AsyncTransportPool.getRandomHost();
+		if(address == null) 
+			return null;
 		TNonblockingSocket transport = new TNonblockingSocket(address.getHostString(), address.getPort(), clientTimeout); 
 		return transport;
 	}
@@ -45,5 +45,4 @@ public class AsyncTransportPoolFactory extends BasePooledObjectFactory<TNonblock
 	public boolean validateObject(PooledObject<TNonblockingTransport> t) {
 		return t.getObject().isOpen();
 	}
-	
 }

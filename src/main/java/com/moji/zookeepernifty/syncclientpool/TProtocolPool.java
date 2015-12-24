@@ -75,7 +75,7 @@ public class TProtocolPool {
 		}
 	}
 	
-	private static InetSocketAddress getRandomHost() {
+	static InetSocketAddress getRandomHost() {
 		if (innerQueue.isEmpty()) {
 			if (!containerList.isEmpty()) {
 				Collections.shuffle(containerList);
@@ -88,12 +88,14 @@ public class TProtocolPool {
 	public static TProtocol getTransport(String path, Class<?> clazz) {
 		GenericObjectPool<TProtocol> pool = poolMap.get(path);
 		if(pool == null) {
+			if(containerList.size() == 0) {
+				return null;
+			}
 			GenericObjectPoolConfig poolConfig = new GenericObjectPoolConfig();
 			poolConfig.setMaxTotal(config.getTransportCount(path));
 			poolConfig.setBlockWhenExhausted(true);
 			poolConfig.setMaxWaitMillis(-1); //获取不到永远等待
-			InetSocketAddress address = getRandomHost();
-			TProtocolPoolFactory protocolPoolFactory = new TProtocolPoolFactory(clazz, address, niftyClient);
+			TProtocolPoolFactory protocolPoolFactory = new TProtocolPoolFactory(clazz, niftyClient);
 			GenericObjectPool<TProtocol> poolInit = new GenericObjectPool<TProtocol>(protocolPoolFactory,poolConfig);
 			poolMap.put(path, poolInit);
 			pool = poolInit;
@@ -109,7 +111,8 @@ public class TProtocolPool {
 	
 	public static void returnTransport(String path, TProtocol obj) {
 		GenericObjectPool<TProtocol> pool = poolMap.get(path);
-		pool.returnObject(obj);
+		if(pool != null && obj.getTransport().isOpen()) 
+			pool.returnObject(obj); 
 	}
 	
 	public static void close() {
@@ -121,5 +124,16 @@ public class TProtocolPool {
 			e.printStackTrace();
 		}
 		logger.info("pool closed");
+	}
+	public static  void clearServicePool(String path) {
+		synchronized (lock) {
+			innerQueue.clear();
+			containerList.clear();
+			GenericObjectPool<TProtocol> pool = poolMap.get(path);
+			if(pool != null) {
+				pool.close();
+				poolMap.remove(path);
+			}
+		}
 	}
 }
