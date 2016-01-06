@@ -92,7 +92,9 @@ public class TProtocolPool {
 				return null;
 			}
 			GenericObjectPoolConfig poolConfig = new GenericObjectPoolConfig();
-			poolConfig.setMaxTotal(config.getTransportCount(path));
+			poolConfig.setMaxTotal(config.getTransportPoolCount(path).getMaxTotal());
+			poolConfig.setMaxIdle(config.getTransportPoolCount(path).getMaxIdle());
+			poolConfig.setMinIdle(config.getTransportPoolCount(path).getMinIdle());
 			poolConfig.setBlockWhenExhausted(true);
 			poolConfig.setMaxWaitMillis(-1); //获取不到永远等待
 			TProtocolPoolFactory protocolPoolFactory = new TProtocolPoolFactory(clazz, niftyClient);
@@ -111,7 +113,7 @@ public class TProtocolPool {
 	
 	public static void returnTransport(String path, TProtocol obj) {
 		GenericObjectPool<TProtocol> pool = poolMap.get(path);
-		if(pool != null && obj.getTransport().isOpen()) 
+		if(pool != null && obj != null && obj.getTransport().isOpen()) 
 			pool.returnObject(obj); 
 	}
 	

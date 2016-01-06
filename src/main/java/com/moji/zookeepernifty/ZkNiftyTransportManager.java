@@ -524,7 +524,7 @@ public class ZkNiftyTransportManager {
 	private int createPersistentTransport(String path, InetSocketAddress address, HostVersion hostVersion) {
 		ZkNiftyList<TProtocolWithType> list = _client_map.get(path);
 		ClientCount clientCount = _service_client_count_map.get(hostVersion);
-		int transport_count = _config.getTransportCount(path);
+		int transport_count = _config.getTransportPoolCount(path).getMaxTotal();
 		for (int i = 0; i < transport_count; ++i) {
 			TProtocolWithType client = createTransport(path, address, TProtocolType.PERSISTENT);
 			if (client == null) {

@@ -24,6 +24,8 @@ public class ZkNiftyClientConfig extends Object {
 	private static final Logger log = LoggerFactory.getLogger(ZkNiftyClientConfig.class);
 	
 	private static final int DEFAULT_TRANSPORT_COUNT = 10;
+	private static final int DEFAULT_TRANSPORT_MAX_IDLE = 5;
+	private static final int DEFAULT_TRANSPORT_MIN_IDLE = 5;
 	
 	private static final String ZKNIFTYCLIENT = "ZkNiftyClient";
 	private static final String ZOOKEEPERADDRESS = "ZookeeperAddress";
@@ -33,7 +35,10 @@ public class ZkNiftyClientConfig extends Object {
 	
 	private static final String SERVICENAME = "service_name";
 	private static final String SERVICEVERSION = "service_version";
-	private static final String CONNECTIONCOUNT = "connection_count";
+	
+	private static final String	CONNECTION_MAX_TOTAL = "maxTatol";
+	private static final String	CONNECTION_MAX_IDLE = "maxIdle";
+	private static final String	CONNECTIOn_MIN_IDLE = "minIdle";
 	
 	private static final int BOSS_THREAD_DEFAULT_COUNT = 1;
 	private static final int WORKER_THREAD_DEFAULT_COUNT = 4;
@@ -44,14 +49,14 @@ public class ZkNiftyClientConfig extends Object {
 	private int _worker_thread_count = WORKER_THREAD_DEFAULT_COUNT;
 	private int _service_count = 0;
 	private List<String> _service_path_list = new ArrayList<String>();
-	private Map<String, Integer> _service_transport_map = new Hashtable<String, Integer>();
-	
+	private Map<String, ZkNiftyClientPoolCount> _service_transport_map = new Hashtable<String, ZkNiftyClientPoolCount>();
 	public ZkNiftyClientConfig(String config_path) {
 		_config_path = config_path;
 		_service_count = 0;
 	}
 	
 	public ZkNiftyClientConfig() {
+		
 	}
 
 	public int load() {
@@ -124,8 +129,12 @@ public class ZkNiftyClientConfig extends Object {
 					if (child_node != null && child_node.getNodeType() == Node.ELEMENT_NODE) {
 						String service_name = child_node.getAttributes().getNamedItem(SERVICENAME).getNodeValue();
 						String service_version = child_node.getAttributes().getNamedItem(SERVICEVERSION).getNodeValue();
-						Integer count = Integer.parseInt(child_node.getAttributes().getNamedItem(CONNECTIONCOUNT).getNodeValue());
-						_service_transport_map.put("/" + service_name + "/" + service_version, count);
+						Integer maxTotal = Integer.parseInt(child_node.getAttributes().getNamedItem(CONNECTION_MAX_TOTAL).getNodeValue());
+						Integer maxIdle = Integer.parseInt(child_node.getAttributes().getNamedItem(CONNECTION_MAX_IDLE).getNodeValue());
+						Integer minIdle = Integer.parseInt(child_node.getAttributes().getNamedItem(CONNECTIOn_MIN_IDLE).getNodeValue());
+						ZkNiftyClientPoolCount poolCount = new ZkNiftyClientPoolCount(maxTotal, maxIdle, minIdle);
+						_service_transport_map.put("/" + service_name + "/" + service_version, poolCount);
+						
 						_service_path_list.add("/" + service_name + "/" + service_version);
 						
 						++_service_count;
@@ -166,11 +175,11 @@ public class ZkNiftyClientConfig extends Object {
 		return _service_path_list;
 	}
 	
-	public int getTransportCount(String path) {
+	public ZkNiftyClientPoolCount getTransportPoolCount(String path) {
 		if (_service_transport_map.containsKey(path)) {
-			return _service_transport_map.get(path).intValue();
+			return _service_transport_map.get(path);
 		}
-		return DEFAULT_TRANSPORT_COUNT;
+		return new ZkNiftyClientPoolCount(DEFAULT_TRANSPORT_COUNT, DEFAULT_TRANSPORT_MAX_IDLE, DEFAULT_TRANSPORT_MIN_IDLE);
 	}
 
 	public String get_zookeeper_address() {
@@ -196,6 +205,15 @@ public class ZkNiftyClientConfig extends Object {
 	public void set_worker_thread_count(int _worker_thread_count) {
 		this._worker_thread_count = _worker_thread_count;
 	}
+	
+	public Map<String, ZkNiftyClientPoolCount> get_service_transport_map() {
+		return _service_transport_map;
+	}
+
+	public void set_service_transport_map(
+			Map<String, ZkNiftyClientPoolCount> _service_transport_map) {
+		this._service_transport_map = _service_transport_map;
+	}
 
 	public List<String> get_service_path_list() {
 		return _service_path_list;
@@ -203,15 +221,6 @@ public class ZkNiftyClientConfig extends Object {
 
 	public void set_service_path_list(List<String> _service_path_list) {
 		this._service_path_list = _service_path_list;
-	}
-
-	public Map<String, Integer> get_service_transport_map() {
-		return _service_transport_map;
-	}
-
-	public void set_service_transport_map(
-			Map<String, Integer> _service_transport_map) {
-		this._service_transport_map = _service_transport_map;
 	}
 
 }

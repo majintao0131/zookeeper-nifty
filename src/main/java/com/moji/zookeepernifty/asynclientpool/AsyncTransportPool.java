@@ -94,7 +94,9 @@ public class AsyncTransportPool {
 					return null;
 				}
 				GenericObjectPoolConfig poolConfig = new GenericObjectPoolConfig();
-				poolConfig.setMaxTotal(config.getTransportCount(path));
+				poolConfig.setMaxTotal(config.getTransportPoolCount(path).getMaxTotal());
+				poolConfig.setMaxIdle(config.getTransportPoolCount(path).getMaxIdle());
+				poolConfig.setMinIdle(config.getTransportPoolCount(path).getMinIdle());
 				poolConfig.setBlockWhenExhausted(true);
 				poolConfig.setMaxWaitMillis(-1); //获取不到永远等待
 				AsyncTransportPoolFactory transportPoolFactory = new AsyncTransportPoolFactory(DEFAULT_CLIENT_TIMEOUT);
