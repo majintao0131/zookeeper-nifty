@@ -4,10 +4,8 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.Executors;
 
@@ -97,7 +95,7 @@ public class TProtocolPool {
 		}
 	}
 	
-	public void returnTransport(String path, TProtocol obj) {
+	public void returnTransport(TProtocol obj) {
 		if(pool != null && obj != null && obj.getTransport().isOpen()) 
 			pool.returnObject(obj); 
 	}

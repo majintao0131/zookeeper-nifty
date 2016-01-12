@@ -37,7 +37,7 @@ public class PoolSyncClientExample {
 			} catch (Exception e) {
 				System.out.println("Talk Failed. Exception : " + e.getMessage());
 			}
-			pool.returnTransport(path, protocol);
+			pool.returnTransport(protocol);
 		}
 		
 		long endTime=System.currentTimeMillis(); //获取结束时间  
