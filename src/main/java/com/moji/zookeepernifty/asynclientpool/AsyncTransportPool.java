@@ -4,10 +4,8 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.Executors;
 
@@ -25,18 +23,17 @@ import com.moji.zookeepernifty.ZookeeperRPCMutilServerAddressProvider;
 public class AsyncTransportPool {
 	
 	private static Logger logger = LoggerFactory.getLogger(AsyncTransportPool.class);
-	private static AsyncTransportPool instance = null;
-	private static NettyClientConfigBuilder nettyClientConfigBuilder = null;
-	private static NiftyClient niftyClient = null;
-	private static ZkNiftyClientConfig config;
-	private static List<InetSocketAddress> containerList = new ArrayList<InetSocketAddress>();
-	private static Queue<InetSocketAddress> innerQueue = new LinkedList<InetSocketAddress>();
-	private static ZookeeperRPCMutilServerAddressProvider provider = null;
-	private static Map<String, GenericObjectPool<TNonblockingTransport>> poolMap = new HashMap<String, GenericObjectPool<TNonblockingTransport>>();
-	private static Object lock = new Object();
-	private static final int DEFAULT_CLIENT_TIMEOUT = 30000;
-	private AsyncTransportPool(ZkNiftyClientConfig config) {
-		AsyncTransportPool.config = config;
+	private NettyClientConfigBuilder nettyClientConfigBuilder = null;
+	private NiftyClient niftyClient = null;
+	private ZkNiftyClientConfig config;
+	private List<InetSocketAddress> containerList = new ArrayList<InetSocketAddress>();
+	private Queue<InetSocketAddress> innerQueue = new LinkedList<InetSocketAddress>();
+	private ZookeeperRPCMutilServerAddressProvider provider = null;
+	private GenericObjectPool<TNonblockingTransport> pool = null;
+	private Object lock = new Object();
+	private final int DEFAULT_CLIENT_TIMEOUT = 30000;
+	public AsyncTransportPool(ZkNiftyClientConfig config, String path) {
+		this.config = config;
 		if (nettyClientConfigBuilder == null) {
 			nettyClientConfigBuilder = new NettyClientConfigBuilder();
 		}
@@ -52,22 +49,24 @@ public class AsyncTransportPool {
 		if (provider == null) {
 			provider = new ZookeeperRPCMutilServerAddressProvider(config);
 		}
-		provider.registerCallback(new AsyncTransportPoolCallback());
+		provider.registerCallback(new AsyncTransportPoolCallback(this));
 		try {
 			provider.init();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+		GenericObjectPoolConfig poolConfig = new GenericObjectPoolConfig();
+		poolConfig.setMaxTotal(config.getTransportPoolCount(path).getMaxTotal());
+		poolConfig.setMaxIdle(config.getTransportPoolCount(path).getMaxIdle());
+		poolConfig.setMinIdle(config.getTransportPoolCount(path).getMinIdle());
+		poolConfig.setBlockWhenExhausted(true);
+		poolConfig.setMaxWaitMillis(-1); //获取不到永远等待
+		AsyncTransportPoolFactory transportPoolFactory = new AsyncTransportPoolFactory(DEFAULT_CLIENT_TIMEOUT,this);
+		GenericObjectPool<TNonblockingTransport> poolInit = new GenericObjectPool<TNonblockingTransport>(transportPoolFactory,poolConfig);
+		pool = poolInit;
 	}
 	
-	public static AsyncTransportPool getInstance(ZkNiftyClientConfig config) {
-		if(instance == null) {
-			instance = new AsyncTransportPool(config);
-		}
-		return instance;
-	}
-	
-	public static void updateAddressList(List<InetSocketAddress> container) {
+	public void updateAddressList(List<InetSocketAddress> container) {
 		synchronized (lock) {
 			containerList.clear();
 			containerList.addAll(container);
@@ -76,7 +75,7 @@ public class AsyncTransportPool {
 		}
 	}
 	
-	static InetSocketAddress getRandomHost() {
+	InetSocketAddress getRandomHost() {
 		if (innerQueue.isEmpty()) {
 			if (!containerList.isEmpty()) {
 				Collections.shuffle(containerList);
@@ -86,24 +85,8 @@ public class AsyncTransportPool {
 		return innerQueue.poll();
 	}
 	
-	public static TNonblockingTransport getTransport(String path) {
-		GenericObjectPool<TNonblockingTransport> pool = poolMap.get(path);
-		try {
-			if(pool == null) {
-				if(containerList.size() == 0) {
-					return null;
-				}
-				GenericObjectPoolConfig poolConfig = new GenericObjectPoolConfig();
-				poolConfig.setMaxTotal(config.getTransportPoolCount(path).getMaxTotal());
-				poolConfig.setMaxIdle(config.getTransportPoolCount(path).getMaxIdle());
-				poolConfig.setMinIdle(config.getTransportPoolCount(path).getMinIdle());
-				poolConfig.setBlockWhenExhausted(true);
-				poolConfig.setMaxWaitMillis(-1); //获取不到永远等待
-				AsyncTransportPoolFactory transportPoolFactory = new AsyncTransportPoolFactory(DEFAULT_CLIENT_TIMEOUT);
-				GenericObjectPool<TNonblockingTransport> poolInit = new GenericObjectPool<TNonblockingTransport>(transportPoolFactory,poolConfig);
-				poolMap.put(path, poolInit);
-				pool = poolInit;
-			}
+	public TNonblockingTransport getTransport() {
+		try{
 			return pool.borrowObject();
 		} catch (Exception e) {
 			logger.error("get transport form pool failed. error message [{}]",e.getMessage());
@@ -112,13 +95,12 @@ public class AsyncTransportPool {
 		}
 	}
 	
-	public static void returnTransport(String path, TNonblockingTransport obj) {
-		GenericObjectPool<TNonblockingTransport> pool = poolMap.get(path);
+	public void returnTransport(TNonblockingTransport obj) {
 		if(pool !=null && obj != null && obj.isOpen())
 			pool.returnObject(obj);
 	}
 	
-	public static void close() {
+	public void close() {
 		try {
 			niftyClient.close();
 			provider.close();
@@ -129,15 +111,10 @@ public class AsyncTransportPool {
 		logger.info("pool closed");
 	}
 	
-	public static void clearServicePool(String path) {
+	public void clearServicePool(String path) {
 		synchronized (lock) {
 			innerQueue.clear();
 			containerList.clear();
-			 GenericObjectPool<TNonblockingTransport> pool = poolMap.get(path);
-			if(pool != null) {
-				pool.close();
-				poolMap.remove(path);
-			}
 		}
 	}
 }

@@ -36,7 +36,7 @@ public class ZkNiftyClientConfig extends Object {
 	private static final String SERVICENAME = "service_name";
 	private static final String SERVICEVERSION = "service_version";
 	
-	private static final String	CONNECTION_MAX_TOTAL = "maxTatol";
+	private static final String	CONNECTION_MAX_TOTAL = "maxTotal";
 	private static final String	CONNECTION_MAX_IDLE = "maxIdle";
 	private static final String	CONNECTIOn_MIN_IDLE = "minIdle";
 	

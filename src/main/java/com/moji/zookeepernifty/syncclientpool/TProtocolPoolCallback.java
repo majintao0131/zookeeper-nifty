@@ -7,12 +7,19 @@ import com.moji.zookeepernifty.ZkNiftyCallback;
 
 public class TProtocolPoolCallback implements ZkNiftyCallback {
 	
+	private TProtocolPool tProtocolPool;
+	
+	public TProtocolPoolCallback(TProtocolPool tProtocolPool) {
+		super();
+		this.tProtocolPool = tProtocolPool;
+	}
+
 	@Override
 	public void run(String service_path, List<InetSocketAddress> list) {
 		if(list == null || list.size() == 0) {
-			TProtocolPool.clearServicePool(service_path);
+			tProtocolPool.clearServicePool(service_path);
 		} else {
-			TProtocolPool.updateAddressList(list);			
+			tProtocolPool.updateAddressList(list);			
 		}
 	}
 }

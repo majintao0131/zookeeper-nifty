@@ -7,12 +7,18 @@ import com.moji.zookeepernifty.ZkNiftyCallback;
 
 public class AsyncTransportPoolCallback implements ZkNiftyCallback {
 	
+	private AsyncTransportPool asyncTransportPool;
+	
+	public AsyncTransportPoolCallback(AsyncTransportPool asyncTransportPool) {
+		this.asyncTransportPool = asyncTransportPool;
+	}
+
 	@Override
 	public void run(String service_path, List<InetSocketAddress> list) {
 		if(list == null || list.size() == 0) {
-			AsyncTransportPool.clearServicePool(service_path);
+			asyncTransportPool.clearServicePool(service_path);
 		} else {
-			AsyncTransportPool.updateAddressList(list);
+			asyncTransportPool.updateAddressList(list);
 		}
 	}
 }

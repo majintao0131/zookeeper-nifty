@@ -20,17 +20,19 @@ public class TProtocolPoolFactory extends BasePooledObjectFactory<TProtocol> {
 	@SuppressWarnings("rawtypes")
 	private final Class clazz;
 	private final NiftyClient niftyClient;
+	private final TProtocolPool tprotocolPool;
 	private static DefaultZkNiftyClient zkNiftyClient = new DefaultZkNiftyClient();
-	public TProtocolPoolFactory(@SuppressWarnings("rawtypes") Class clazz, NiftyClient niftyClient) {
+	public TProtocolPoolFactory(@SuppressWarnings("rawtypes") Class clazz, NiftyClient niftyClient, TProtocolPool tprotocolPool) {
 		super();
 		this.clazz = clazz;
 		this.niftyClient = niftyClient;
+		this.tprotocolPool = tprotocolPool;
 	}
 
 	@SuppressWarnings("unchecked")
 	@Override
 	public TProtocol create() throws Exception {
-		InetSocketAddress address = TProtocolPool.getRandomHost();
+		InetSocketAddress address = tprotocolPool.getRandomHost();
 		if(address == null) 
 			return null;
 		return zkNiftyClient.createProtocol(clazz, niftyClient, address);

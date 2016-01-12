@@ -29,7 +29,7 @@ public class MyCallback implements AsyncMethodCallback<HelloService.AsyncClient.
 		System.out.println("onComplete");
 		try {
 			System.out.println(response.getResult().toString());
-			pool.returnTransport(path, transport);
+			pool.returnTransport(transport);
 		} catch (TException e) {
 			e.printStackTrace();
 		}

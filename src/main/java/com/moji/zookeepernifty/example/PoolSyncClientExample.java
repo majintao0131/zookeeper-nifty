@@ -13,8 +13,8 @@ public class PoolSyncClientExample {
 	
 	@SuppressWarnings("static-access")
 	private static void runWithSingleThread() {
-		TProtocolPool pool = TProtocolPool.getInstance(config);
 		final String path = "/HelloService/1.0.0";
+		TProtocolPool pool = new TProtocolPool(config,path,HelloService.class);
 		// 必须注册服务路径对应的Client类
 		
 		try {
@@ -25,7 +25,7 @@ public class PoolSyncClientExample {
 		
 		long startTime = System.currentTimeMillis(); // 获取开始时间
 		for(int i = 0; i < 100000;i++) {
-			TProtocol protocol = pool.getTransport(path, HelloService.class);
+			TProtocol protocol = pool.getTransport();
 			try {
 				HelloService.Client client = new HelloService.Client(protocol);
 				if (protocol != null) {

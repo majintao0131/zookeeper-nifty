@@ -59,7 +59,6 @@ public class DefaultZkNiftyServer extends AbstractZkNiftyServer {
 	}
 	
 	public void start(TProcessor processor) throws Exception {
-		Runtime.getRuntime().addShutdownHook(new UnregisterHook());
 		_thriftServerDefBuilder = new ThriftServerDefBuilder()
 					.listen(_config.getListenPort())
 					.withProcessor(processor);
@@ -79,17 +78,6 @@ public class DefaultZkNiftyServer extends AbstractZkNiftyServer {
 			throw e;
 		}
 	}
-	private class UnregisterHook extends Thread{
-        @Override
-        public void run() {
-        	try {
-        		unregisterService();
-                Thread.sleep(5 * 1000);//sleep 5s
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-    }
 	
 	private NettyServerConfigBuilder defaultThriftServerConfigBuilder() throws Exception {
 		try {

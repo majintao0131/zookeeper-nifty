@@ -16,9 +16,9 @@ public class PoolAsynClientExample {
 	
 	@SuppressWarnings("static-access")
 	private static void runWithSingleThread() {
-		AsyncTransportPool pool = AsyncTransportPool.getInstance(config);
-
 		final String path = "/HelloService/1.0.0";
+		AsyncTransportPool pool = new AsyncTransportPool(config,path);
+
 		// 必须注册服务路径对应的Client类
 		
 		try {
@@ -37,7 +37,7 @@ public class PoolAsynClientExample {
 
 		for(int i = 0; i < 100000;i++) {
 			TProtocolFactory protocol = new TBinaryProtocol.Factory();
-			TNonblockingTransport transport = pool.getTransport(path);
+			TNonblockingTransport transport = pool.getTransport();
 			HelloService.AsyncClient asyncClient = new HelloService.AsyncClient(protocol, clientManager, transport);
 			try {
 				if (asyncClient != null) {

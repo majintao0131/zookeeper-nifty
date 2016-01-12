@@ -25,17 +25,18 @@ import com.moji.zookeepernifty.ZookeeperRPCMutilServerAddressProvider;
 public class TProtocolPool {
 	
 	private static Logger logger = LoggerFactory.getLogger(TProtocolPool.class);
-	private static TProtocolPool instance = null;
-	private static NettyClientConfigBuilder nettyClientConfigBuilder = null;
-	private static NiftyClient niftyClient = null;
-	private static ZkNiftyClientConfig config;
-	private static List<InetSocketAddress> containerList = new ArrayList<InetSocketAddress>();
-	private static Queue<InetSocketAddress> innerQueue = new LinkedList<InetSocketAddress>();
-	private static ZookeeperRPCMutilServerAddressProvider provider = null;
-	private static Map<String, GenericObjectPool<TProtocol>> poolMap = new HashMap<String, GenericObjectPool<TProtocol>>();
-	private static Object lock = new Object();
-	private TProtocolPool(ZkNiftyClientConfig config) {
-		TProtocolPool.config = config;
+	private NettyClientConfigBuilder nettyClientConfigBuilder = null;
+	private NiftyClient niftyClient = null;
+	private ZkNiftyClientConfig config;
+	private List<InetSocketAddress> containerList = new ArrayList<InetSocketAddress>();
+	private Queue<InetSocketAddress> innerQueue = new LinkedList<InetSocketAddress>();
+	private ZookeeperRPCMutilServerAddressProvider provider = null;
+	private GenericObjectPool<TProtocol> pool = null;
+	private String path = null;
+	private Object lock = new Object();
+	public TProtocolPool(ZkNiftyClientConfig config, String path, Class clazz) {
+		this.config = config;
+		this.path = path;
 		if (nettyClientConfigBuilder == null) {
 			nettyClientConfigBuilder = new NettyClientConfigBuilder();
 		}
@@ -51,22 +52,24 @@ public class TProtocolPool {
 		if (provider == null) {
 			provider = new ZookeeperRPCMutilServerAddressProvider(config);
 		}
-		provider.registerCallback(new TProtocolPoolCallback());
+		provider.registerCallback(new TProtocolPoolCallback(this));
 		try {
 			provider.init();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+		GenericObjectPoolConfig poolConfig = new GenericObjectPoolConfig();
+		poolConfig.setMaxTotal(config.getTransportPoolCount(path).getMaxTotal());
+		poolConfig.setMaxIdle(config.getTransportPoolCount(path).getMaxIdle());
+		poolConfig.setMinIdle(config.getTransportPoolCount(path).getMinIdle());
+		poolConfig.setBlockWhenExhausted(true);
+		poolConfig.setMaxWaitMillis(-1); //获取不到永远等待
+		TProtocolPoolFactory protocolPoolFactory = new TProtocolPoolFactory(clazz, niftyClient,this);
+		GenericObjectPool<TProtocol> poolInit = new GenericObjectPool<TProtocol>(protocolPoolFactory,poolConfig);
+		pool = poolInit;
 	}
 	
-	public static TProtocolPool getInstance(ZkNiftyClientConfig config) {
-		if(instance == null) {
-			instance = new TProtocolPool(config);
-		}
-		return instance;
-	}
-	
-	public static void updateAddressList(List<InetSocketAddress> container) {
+	public void updateAddressList(List<InetSocketAddress> container) {
 		synchronized (lock) {
 			containerList.clear();
 			containerList.addAll(container);
@@ -75,7 +78,7 @@ public class TProtocolPool {
 		}
 	}
 	
-	static InetSocketAddress getRandomHost() {
+	InetSocketAddress getRandomHost() {
 		if (innerQueue.isEmpty()) {
 			if (!containerList.isEmpty()) {
 				Collections.shuffle(containerList);
@@ -85,39 +88,21 @@ public class TProtocolPool {
 		return innerQueue.poll();
 	}
 	
-	public static TProtocol getTransport(String path, Class<?> clazz) {
-		GenericObjectPool<TProtocol> pool = poolMap.get(path);
-		if(pool == null) {
-			if(containerList.size() == 0) {
-				return null;
-			}
-			GenericObjectPoolConfig poolConfig = new GenericObjectPoolConfig();
-			poolConfig.setMaxTotal(config.getTransportPoolCount(path).getMaxTotal());
-			poolConfig.setMaxIdle(config.getTransportPoolCount(path).getMaxIdle());
-			poolConfig.setMinIdle(config.getTransportPoolCount(path).getMinIdle());
-			poolConfig.setBlockWhenExhausted(true);
-			poolConfig.setMaxWaitMillis(-1); //获取不到永远等待
-			TProtocolPoolFactory protocolPoolFactory = new TProtocolPoolFactory(clazz, niftyClient);
-			GenericObjectPool<TProtocol> poolInit = new GenericObjectPool<TProtocol>(protocolPoolFactory,poolConfig);
-			poolMap.put(path, poolInit);
-			pool = poolInit;
-		}
+	public TProtocol getTransport() {
 		try {
 			return pool.borrowObject();
 		} catch (Exception e) {
 			logger.error("get transport form pool failed. error message [{}]",e.getMessage());
-			e.printStackTrace();
 			return null;
 		}
 	}
 	
-	public static void returnTransport(String path, TProtocol obj) {
-		GenericObjectPool<TProtocol> pool = poolMap.get(path);
+	public void returnTransport(String path, TProtocol obj) {
 		if(pool != null && obj != null && obj.getTransport().isOpen()) 
 			pool.returnObject(obj); 
 	}
 	
-	public static void close() {
+	public void close() {
 		try {
 			niftyClient.close();
 			provider.close();
@@ -127,15 +112,10 @@ public class TProtocolPool {
 		}
 		logger.info("pool closed");
 	}
-	public static  void clearServicePool(String path) {
+	public void clearServicePool(String path) {
 		synchronized (lock) {
 			innerQueue.clear();
 			containerList.clear();
-			GenericObjectPool<TProtocol> pool = poolMap.get(path);
-			if(pool != null) {
-				pool.close();
-				poolMap.remove(path);
-			}
 		}
 	}
 }
